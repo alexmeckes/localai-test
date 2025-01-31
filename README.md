@@ -2,6 +2,10 @@
 
 A tool to check if your local system can run specific AI models by analyzing your hardware specifications and comparing them with model requirements.
 
+## 🎥 Demo
+
+![Demo](demo.gif)
+
 ## ⚠️ Important Note
 
 This tool is designed to run **locally only** and cannot be deployed on Streamlit Cloud or similar platforms because it needs direct access to your system's hardware information (CPU, GPU, RAM).
