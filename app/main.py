@@ -47,9 +47,9 @@ st.markdown("""
 # Initialize services
 @st.cache_resource
 def init_model_service():
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
-        st.warning("⚠️ ANTHROPIC_API_KEY not found in environment variables. Some features will be limited.")
+        st.warning("⚠️ OPENROUTER_API_KEY not found in environment variables. Some features will be limited.")
     return ModelInfoService(api_key)
 
 model_service = init_model_service()
@@ -101,7 +101,9 @@ def render_model_selection():
         placeholder="e.g., facebook/opt-350m",
         help="Enter the model ID from HuggingFace Hub (e.g., facebook/opt-350m)"
     )
-    
+    return model_id
+
+def render_inference_config():
     st.markdown("### ⚙️ Inference Configuration")
     st.markdown("""
     <div style="background-color: #f0f2f6; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 0.9em;">
@@ -118,7 +120,8 @@ def render_model_selection():
             help="Lower precision = less memory but potentially lower quality\n\n" +
                  "- FP32: Full precision, highest accuracy\n" +
                  "- FP16: Half precision, good balance\n" +
-                 "- INT8/INT4: Reduced precision, significant memory savings"
+                 "- INT8/INT4: Reduced precision, significant memory savings",
+            key="precision_select"
         )
     
     with config_col2:
@@ -128,10 +131,11 @@ def render_model_selection():
             help="Quantization reduces model size and memory usage\n\n" +
                  "- GGUF/GGML: Optimized for CPU inference\n" +
                  "- GPTQ/AWQ: Optimized for GPU inference\n" +
-                 "- QLORA: For fine-tuning with limited memory"
+                 "- QLORA: For fine-tuning with limited memory",
+            key="quantization_select"
         )
     
-    return model_id, selected_precision, selected_quantization
+    return selected_precision, selected_quantization
 
 def render_compatibility_gauge(score):
     colors = {
@@ -346,30 +350,49 @@ def main():
     system_specs = get_cached_system_specs()
     render_system_specs(system_specs)
     
-    # Model selection and configuration
-    model_id, selected_precision, selected_quantization = render_model_selection()
+    # Model selection
+    model_id = render_model_selection()
+    
+    # Inference configuration (always interactive)
+    selected_precision, selected_quantization = render_inference_config()
+    
+    # Store model requirements in session state
+    if 'model_reqs' not in st.session_state:
+        st.session_state.model_reqs = None
     
     if model_id:
         try:
-            with st.spinner("Analyzing model requirements..."):
-                model_reqs = model_service.extract_model_requirements(model_id)
+            # Only fetch model requirements if model ID changes or not fetched yet
+            if (not st.session_state.model_reqs or 
+                st.session_state.model_reqs.name != model_id):
                 
-                # Override precision and quantization with user selections
-                model_reqs.precision = PrecisionType(selected_precision)
-                model_reqs.quantization = QuantizationType(selected_quantization) if selected_quantization != "none" else None
-                
-                # Recalculate memory requirements with new settings
-                min_gpu, rec_gpu, min_cpu, can_cpu = model_service.estimate_memory_requirements(
-                    model_reqs.parameter_count,
-                    model_reqs.precision,
-                    model_reqs.quantization,
-                    model_reqs.architecture
-                )
-                
-                model_reqs.min_gpu_memory = min_gpu
-                model_reqs.recommended_gpu_memory = rec_gpu
-                model_reqs.min_cpu_ram = min_cpu
-                model_reqs.can_run_cpu = can_cpu
+                with st.spinner("Analyzing model requirements..."):
+                    st.info("Fetching model information from HuggingFace...")
+                    model_reqs = model_service.extract_model_requirements(model_id)
+                    st.success("Model information retrieved successfully!")
+                    st.session_state.model_reqs = model_reqs
+            
+            # Get current model requirements from session state
+            model_reqs = st.session_state.model_reqs
+            
+            # Update precision and quantization based on user selection
+            model_reqs.precision = PrecisionType(selected_precision)
+            model_reqs.quantization = QuantizationType(selected_quantization) if selected_quantization != "none" else None
+            
+            st.info("Calculating memory requirements...")
+            # Recalculate memory requirements with new settings
+            min_gpu, rec_gpu, min_cpu, can_cpu = model_service.estimate_memory_requirements(
+                model_reqs.parameter_count,
+                model_reqs.precision,
+                model_reqs.quantization,
+                model_reqs.architecture
+            )
+            
+            # Update memory requirements
+            model_reqs.min_gpu_memory = min_gpu
+            model_reqs.recommended_gpu_memory = rec_gpu
+            model_reqs.min_cpu_ram = min_cpu
+            model_reqs.can_run_cpu = can_cpu
             
             # Display results
             render_model_requirements(model_reqs)
@@ -387,6 +410,8 @@ def main():
             
         except Exception as e:
             st.error(f"Error analyzing model: {str(e)}")
+            import traceback
+            st.error(f"Detailed error: {traceback.format_exc()}")
 
 if __name__ == "__main__":
     main() 

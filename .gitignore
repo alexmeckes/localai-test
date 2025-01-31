@@ -40,6 +40,9 @@ env/
 # Streamlit
 .streamlit/
 
+# System
+Thumbs.db
+
 # Logs
 *.log
 logs/ 

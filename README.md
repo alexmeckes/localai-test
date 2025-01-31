@@ -28,9 +28,9 @@ This tool is designed to run **locally only** and cannot be deployed on Streamli
    pip install -r requirements.txt
    ```
 
-4. Create a `.env` file in the root directory and add your Anthropic API key:
+4. Create a `.env` file in the root directory and add your OpenRouter API key:
    ```
-   ANTHROPIC_API_KEY=your-api-key-here
+   OPENROUTER_API_KEY=your-api-key-here
    ```
 
 5. Run the application:
@@ -46,6 +46,33 @@ This tool is designed to run **locally only** and cannot be deployed on Streamli
 - 💾 Memory estimation for different precision and quantization settings
 - 🎯 Compatibility scoring and recommendations
 - 🔄 Automatic memory requirement adjustments based on inference settings
+- 🧠 Intelligent model requirement extraction using DeepSeek via OpenRouter
+- 📝 Detailed source information and confidence scores
+- 💡 Dynamic inference configuration updates
+- 🔍 Regex-based parameter extraction as fallback
+- 🚀 Improved response handling with increased token limits
+- ⚡ Optimized API calls with proper error handling
+- 🗃️ Caches results for faster repeated checks
+
+## 🔑 API Keys
+
+### OpenRouter API
+The application uses OpenRouter to access the DeepSeek model for intelligent requirement extraction. To set up:
+
+1. Sign up at [OpenRouter](https://openrouter.ai/)
+2. Get your API key from the dashboard
+3. Add to your `.env` file:
+   ```
+   OPENROUTER_API_KEY=your-api-key-here
+   ```
+
+Recent improvements:
+- Increased max_tokens to 4000 for better response handling
+- Added timeout handling for API calls
+- Improved error handling with fallback to regex extraction
+- Enhanced prompt engineering for more accurate extraction
+- Added confidence scores for extracted information
+- Dynamic recalculation of requirements when changing inference settings
 
 ## 🛠️ System Requirements
 
